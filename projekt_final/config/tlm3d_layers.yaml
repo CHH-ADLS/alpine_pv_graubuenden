@@ -1,0 +1,263 @@
+# swissTLM3D Layer Konfiguration
+# Alpine PV SMCA — MCE Alpine PV Graubünden
+# Automatisch generiert aus MCE_Alpine_PV_Graubuenden.xlsx
+
+tlm3d_datasets:
+
+  ############################################################################
+  # TIER 1: KRITISCHE LAYER (in 02a_preprocessing_constraints.ipynb)
+  ############################################################################
+  
+  tlm_bb_bodenbedeckung:
+    description: "Bodenbedeckungs-Polygone (Wald, Siedlung, Landwirtschaft)"
+    gpkg_layer: "tlm_bb_bodenbedeckung"
+    criteria:
+      - C10: "Wald (Ausschluss)"
+      - C12: "Gletscher/Firn (Ausschluss)"
+      - C18: "Landbedeckung ungeeignet (Reben, Obstanlagen)"
+    cache_key: "tlm_bodenbedeckung"
+    cache_type: "GeoDataFrame"
+    priority: "KRITISCH"
+    estimated_size: "100 MB"
+    status: "✓ GECACHT in 02a"
+
+  tlm_gewaesser_fliessgewaesser:
+    description: "Fliessgewässer-Polylinien (Flüsse, Bäche)"
+    gpkg_layer: "tlm_gewaesser_fliessgewaesser"
+    criteria:
+      - C11: "Gewässer + 20m Puffer (Ausschluss)"
+    cache_key: "tlm_bodengewaesser"  # Bundled with stehendes
+    cache_type: "GeoDataFrame"
+    priority: "KRITISCH"
+    estimated_size: "30 MB"
+    status: "✓ GECACHT in 02a (bundled)"
+
+  tlm_gewaesser_stehendes_gewaesser:
+    description: "Stehende Gewässer-Polygone (Seen, Weiher)"
+    gpkg_layer: "tlm_gewaesser_stehendes_gewaesser"
+    criteria:
+      - C11: "Gewässer + 20m Puffer (Ausschluss)"
+    cache_key: "tlm_bodengewaesser"  # Bundled with fliessgewaesser
+    cache_type: "GeoDataFrame"
+    priority: "KRITISCH"
+    estimated_size: "20 MB"
+    status: "✓ GECACHT in 02a (bundled)"
+
+  tlm_bauten_gebaeude_footprint:
+    description: "Gebäude-Fußabdrücke (Polygone, Punkte)"
+    gpkg_layer: "tlm_bauten_gebaeude_footprint"
+    criteria:
+      - C13: "Siedlung + 100m Puffer (Ausschluss)"
+    cache_key: "tlm_gebaeude"
+    cache_type: "GeoDataFrame"
+    priority: "KRITISCH"
+    estimated_size: "150 MB"
+    status: "✓ GECACHT in 02a"
+
+  ############################################################################
+  # TIER 2: WICHTIGE LAYER (müssen noch georasterized & gecacht werden)
+  ############################################################################
+
+  tlm_strasse:
+    description: "Straßen-Polylinien (alle Klassifikationen)"
+    gpkg_layer: "tlm_strasse"
+    criteria:
+      - "C13b: Siedlungsabstand u. Straßenproximitöt (WLC)"
+      - "Sichtbarkeit/Covisibility Analyse (WLC Faktor #5)"
+      - "Distanz zur Infrastruktur (Nähe zu Bestehendem)"
+    cache_key: "tlm_strasse"
+    cache_type: "GeoDataFrame"
+    buffer_distance_m: [50, 100, 200]  # Pour Distance Raster Optionen
+    priority: "WICHTIG"
+    estimated_size: "50 MB"
+    status: "TODO: 02b oder 03?"
+    notebooks_required:
+      - "02_preprocessing (optional)"
+      - "04_criteria_scoring (distance raster)"
+      - "06_wlc_suitability (WLC Faktor #5)"
+
+  tlm_seilbahn:
+    description: "Seilbahnen und Skilifte (Punkte/Linien)"
+    gpkg_layer: "tlm_seilbahn"
+    criteria:
+      - "Covisibility / Sichtanalyse (WLC Faktor #8)"
+      - "Touristische Infrastruktur-Abstand"
+    cache_key: "tlm_seilbahn"
+    cache_type: "GeoDataFrame"
+    buffer_distance_m: [500]  # Covisibility Zone
+    priority: "WICHTIG"
+    estimated_size: "7 MB"
+    status: "TODO: 04_criteria_scoring oder 06_wlc"
+    notebooks_required:
+      - "04_criteria_scoring"
+      - "06_wlc_suitability"
+
+  ############################################################################
+  # TIER 3: OPTIONALE LAYER (spezielle Szenarien/Analysen)
+  ############################################################################
+
+  tlm_staumauer:
+    description: "Staumauern und Wasserturbinen (Infrastruktur)"
+    gpkg_layer: "tlm_staumauer"
+    criteria:
+      - "Wasserkraft-Synergien / Konfliktanalyse"
+      - "Sichtbarkeit (Landscape Impact)"
+    cache_key: "tlm_staumauer"
+    cache_type: "GeoDataFrame"
+    priority: "OPTIONAL"
+    estimated_size: "3 MB"
+    status: "TODO: 08_sensitivity_analysis oder Spezialszenarien"
+    notebooks_required:
+      - "08_sensitivity_analysis"
+
+  tlm_elektrizitaetsleitungen:
+    description: "Hochspannungsleitungen (Übertragungsnetz)"
+    gpkg_layer: "tlm_elektrizitaetsleitungen"  # Falls vorhanden
+    criteria:
+      - "Nähe zur Stromeinspeisung (Vorteil)"
+      - "Sichtbeeinträchtigung (Nachteil)"
+    cache_key: "tlm_elektrolines"
+    cache_type: "GeoDataFrame"
+    priority: "OPTIONAL"
+    status: "OPTIONAL — Falls notwendig später"
+
+  ############################################################################
+  # UNTERSTÜTZUNGS-DATEN (Nicht tlm3d, aber tlm3d-abhängig)
+  ############################################################################
+
+swissalti3d_dhm25:
+  description: "Digitales Höhenmodell 25m Auflösung"
+  file_pattern: "dhm25_*.tif oder dhm25_*.asc"
+  derivatives:
+    - slope: "Hangneigung (Gradient)"
+    - aspect: "Exposition (Azimuth)"
+    - hillshade: "Schattierungen (Visualisierung)"
+    - curvature: "Wölbung (optim. Ausrichtung)"
+  criteria:
+    - "C01: Minimale Höhe (1500m, szenarioabhängig)"
+    - "C02: Maximale Höhe (2700m, szenarioabhängig)"
+    - "C03: Hangneigung < 35° (S2)"
+    - "C04: Exposition 120–240° (Süd bis SO)"
+  cache_key: "dem_derivatives"
+  cache_type: "Dictionary of numpy arrays (slope, aspect, etc.)"
+  priority: "KRITISCH"
+  status: "✓ Teils in 02a, teils in 01_data_exploration"
+
+swissboundaries_canton:
+  description: "Kantonsgrenzen GR (Ausschnittmaske)"
+  file: "swissboundaries_gemeinden.shp"
+  cache_key: "gr_boundary"
+  cache_type: "Shapely Polygon"
+  priority: "KRITISCH"
+  status: "✓ In 02a geladen"
+
+################################################################################
+# IMPLEMENTIERUNGS-ROADMAP
+################################################################################
+
+implementation_plan:
+
+  phase_1_completed:
+    notebook: "01_data_exploration.ipynb"
+    layers: ["DEM", "BFE_Solar", "SPASS"]
+    caching: "JSON metadata + Pickle for large arrays"
+    status: "✓ DONE"
+
+  phase_2_completed:
+    notebook: "02a_preprocessing_constraints.ipynb (Ausschlussmaske)"
+    layers: 
+      - "tlm_bb_bodenbedeckung"
+      - "tlm_gewaesser_fliessgewaesser"
+      - "tlm_gewaesser_stehendes_gewaesser"
+      - "tlm_bauten_gebaeude_footprint"
+    caching: "Pickle GeoDataFrames + 7d TTL"
+    status: "✓ DONE — Tier 1 complete"
+
+  phase_3_in_progress:
+    notebook: "02a_preprocessing_constraints.ipynb (erweitert)"
+    layers:
+      - "tlm_strasse"
+      - "tlm_seilbahn"
+      - "tlm_staumauer (optional)"
+    caching: "Pickle GeoDataFrames + Distance Rasters"
+    status: "TODO — User: Sollen diese noch in 02a oder erst in 04_criteria?"
+    decision_needed: true
+
+  phase_4_planned:
+    notebook: "04_criteria_scoring.ipynb"
+    layers:
+      - "tlm_strasse (Distance Raster)"
+      - "tlm_seilbahn (Viewshed/Covisibility)"
+    caching: "Rasterio GeoTIFF (25m resolution)"
+    status: "TODO"
+
+  phase_5_planned:
+    notebook: "06_wlc_suitability.ipynb"
+    layers: "Alle der obigen als Input zu WLC Model"
+    status: "TODO"
+
+################################################################################
+# CACHING-STRATEGIE
+################################################################################
+
+cache_strategy:
+  directory: "data/processed/cache/"
+  file_format: "pickle (.pkl)"
+  ttl_days: 7
+  max_age_check: true
+  force_refresh_override: true
+  
+  parallel_loading: true  # Greift auf mehrere Caches gleichzeitig zu
+  
+  compression: false  # Pickle native compression nicht verwendet
+  
+  bundling_strategy:
+    - key: "tlm_bodengewaesser"
+      includes: ["tlm_gewaesser_fliessgewaesser", "tlm_gewaesser_stehendes_gewaesser"]
+      reason: "Beide werden in C11 zusammen verwendet"
+    
+    - key: "tlm_strasse"
+      includes: ["tlm_strasse only"]
+      reason: "Wird für Distance Raster in mehreren Notebooks verwendet"
+
+cache_naming_convention: "{key}.pkl"
+  # Beispiele:
+  # - tlm_bodenbedeckung.pkl
+  # - tlm_strasse.pkl
+  # - tlm_seilbahn.pkl
+  # - dem_derivatives.pkl
+
+################################################################################
+# HINWEISE FÜR ENTWICKLER
+################################################################################
+
+developer_notes:
+  
+  gpkg_path: "data/raw/tlm3d/swisstlm3d_2026-02-24_2056_5728.gpkg"
+  
+  bbox_clipping: "Immer mit gr_border.total_bounds clippen um Speicher zu sparen"
+  
+  crs_assumption: "EPSG:2056 (Swiss LV95)"
+  
+  nodata_value: -9999.0
+  
+  raster_resolution: 25
+  
+  disturbance_lines:
+    - "Einige tlm_strasse Segments können fehlende Attribute haben — filter(~isnull())"
+    - "tlm_seilbahn kann als Punkte oder Polylinien vorliegen — beide Geometrie-Typen unterstützen"
+  
+  windows_issue:
+    - "GEOPackage (GPKG) nested-file-access Problem auf Windows"
+    - "Lösung: Explizit alle Layer einzeln mit layer= Parameter auflisten"
+
+################################################################################
+# EXCEL-EXPORT METADATEN
+################################################################################
+
+source_document:
+  file: "MCE_Alpine_PV_Graubuenden.xlsx"
+  generated_date: "2026-03-26"
+  sheets: ["Kriterien", "WLC-Gewichte", "MCE-Matrix", "Szenarien"]
+  last_updated: "2026-03-XX"
+  analyst: "ZHAW IUNR PA1 Team"
