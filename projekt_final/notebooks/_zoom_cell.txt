@@ -1,0 +1,123 @@
+# ── Zoom-Panels: Ausgewählte Standorte im Detail ─────────────────────────
+if "gdf_sites" not in dir() or gdf_sites.empty or "cls_before" not in dir():
+    print("Bitte erst Zellen 15–20 ausführen")
+else:
+    from shapely.geometry import box as _box
+
+    # Gemeindegrenzen laden (nur GR)
+    _muni_all = gpd.read_file(RAW / "swissboundaries/swissboundaries_gemeinden.shp").to_crs(CRS)
+    _canton_col = next(c for c in _muni_all.columns if "KANT" in c.upper() or c.upper().startswith("KT"))
+    gr_muni = _muni_all[_muni_all[_canton_col].astype(str).str.contains("GR", case=False, na=False)].copy()
+    _name_col = next((c for c in gr_muni.columns if c.upper() in ("NAME", "GEMEINDENA", "GMDNAME", "GDENAME")), None)
+
+    hi = gdf_sites[gdf_sites["mean_suit"] >= 0.8]
+
+    # 1. Grösste Fläche mit mean_suit ≥ 0.8
+    site_area = hi.loc[hi["area_ha"].idxmax()]
+
+    # 2. Effizienteste Winterproduktion mit mean_suit ≥ 0.8 (Winter-GWh pro ha)
+    w_col = "winter_gwh" if "winter_gwh" in gdf_sites.columns else "annual_gwh"
+    hi = hi.copy()
+    hi["_winter_eff"] = hi[w_col] / hi["area_ha"].clip(lower=0.001)
+    site_winter = hi.loc[hi["_winter_eff"].idxmax()]
+
+    # 3+4. Effizienteste 2 Anlagen (GWh/ha)
+    e_col = "gwh_per_ha" if "gwh_per_ha" in gdf_sites.columns else "annual_gwh"
+    eff2 = gdf_sites.nlargest(2, e_col)
+
+    def _w_label(s):
+        if "winter_gwh" in s.index:
+            return f"{s['winter_gwh']:.1f} GWh Winter"
+        return f"{s['annual_gwh']:.1f} GWh Jahres"
+
+    def _e_label(s):
+        if "gwh_per_ha" in s.index:
+            return f"{s['gwh_per_ha']:.2f} GWh/ha"
+        return f"{s['annual_gwh']:.1f} GWh"
+
+    zoom_items = [
+        (site_area,    f"Grösste Fläche ≥0.8 | Rang #{site_area['rang']} | "
+                       f"{site_area['area_ha']:.0f} ha | suit {site_area['mean_suit']:.3f}"),
+        (site_winter,  f"Effizienteste Winterproduktion ≥0.8 | Rang #{site_winter['rang']} | "
+                       f"{_w_label(site_winter)} | suit {site_winter['mean_suit']:.3f}"),
+        (eff2.iloc[0], f"Effizienteste Anlage #1 | Rang #{eff2.iloc[0]['rang']} | "
+                       f"{_e_label(eff2.iloc[0])} | suit {eff2.iloc[0]['mean_suit']:.3f}"),
+        (eff2.iloc[1], f"Effizienteste Anlage #2 | Rang #{eff2.iloc[1]['rang']} | "
+                       f"{_e_label(eff2.iloc[1])} | suit {eff2.iloc[1]['mean_suit']:.3f}"),
+    ]
+
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12), constrained_layout=True,
+                             facecolor=BG_COLOR)
+    fig.suptitle("Zoom-Ansicht — Ausgewählte Standorte", fontsize=13, fontweight="bold",
+                 color="white")
+
+    for ax, (site, title) in zip(axes.flat, zoom_items):
+        geom = site.geometry
+        bx   = geom.bounds
+        size = max(bx[2] - bx[0], bx[3] - bx[1])
+        buf  = max(size * 2.5, 4_000)
+
+        xlim = (bx[0] - buf, bx[2] + buf)
+        ylim = (bx[1] - buf, bx[3] + buf)
+
+        ax.set_facecolor(BG_COLOR)
+        ax.imshow(cls_before, cmap=cmap_cls, norm=norm_cls, alpha=0.25,
+                  aspect="equal", extent=extent, interpolation="nearest")
+        ax.imshow(cls_final, cmap=cmap_cls, norm=norm_cls, alpha=1.0,
+                  aspect="equal", extent=extent, interpolation="nearest")
+
+        # Kantonsgrenze
+        gr_border.boundary.plot(ax=ax, color="white", linewidth=1.2)
+
+        # Gemeindegrenzen (nur sichtbare im Ausschnitt)
+        _view_box = _box(xlim[0], ylim[0], xlim[1], ylim[1])
+        _muni_vis = gr_muni[gr_muni.geometry.intersects(_view_box)].copy()
+        if not _muni_vis.empty:
+            _muni_vis.boundary.plot(ax=ax, color="white", linewidth=0.4, linestyle="--", alpha=0.6)
+
+            # Gemeindenamen — grösste Gemeinden zuerst, Überlappungsschutz per Mindestabstand
+            if _name_col:
+                _min_sep = (xlim[1] - xlim[0]) * 0.15  # 15 % der Kartenbreite
+                _placed = []  # bereits gesetzte Label-Positionen
+                _muni_vis["_area"] = _muni_vis.geometry.area
+                for _, row in _muni_vis.sort_values("_area", ascending=False).iterrows():
+                    c = row.geometry.centroid
+                    if not (xlim[0] < c.x < xlim[1] and ylim[0] < c.y < ylim[1]):
+                        continue
+                    # Abstand zu allen bereits platzierten Labels prüfen
+                    if any(((c.x - px)**2 + (c.y - py)**2) ** 0.5 < _min_sep
+                           for px, py in _placed):
+                        continue
+                    ax.text(c.x, c.y, row[_name_col], fontsize=6, ha="center", va="center",
+                            color="white", alpha=0.9,
+                            bbox=dict(boxstyle="round,pad=0.2", fc=BG_COLOR, alpha=0.6, lw=0))
+                    _placed.append((c.x, c.y))
+
+        # Standort hervorheben
+        gpd.GeoDataFrame({"geometry": [geom]}, crs=CRS).plot(
+            ax=ax, facecolor="none", edgecolor="black", linewidth=2.5
+        )
+        centroid = geom.centroid
+        ax.scatter([centroid.x], [centroid.y], color='yellow', edgecolor='black', s=80, zorder=6)
+        ax.text(centroid.x, centroid.y, f"#{site['rang']}", fontsize=7, ha='center', va='center',
+                color='black', bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.8, lw=0))
+
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        ax.set_title(title, fontsize=8.5, pad=5, color="white")
+        ax.set_axis_off()
+
+    # Gemeinsame Legende
+    sm = plt.cm.ScalarMappable(cmap=cmap_cls, norm=norm_cls)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=axes, shrink=0.6, pad=0.04, aspect=22, location="right")
+    cbar.set_ticks([1, 2, 3, 4, 5])
+    cbar.set_ticklabels(CLASS_LABELS)
+    cbar.ax.yaxis.set_tick_params(color="white")
+    plt.setp(cbar.ax.yaxis.get_ticklabels(), color="white")
+
+    fig.savefig(OUT_F / "zoom_sites.png", dpi=150, bbox_inches="tight",
+
+                facecolor=BG_COLOR)
+
+    plt.show()    print(f"Gespeichert: {OUT_F / 'zoom_sites.png'}")
