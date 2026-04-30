@@ -25,6 +25,9 @@ dependencies:
   - gdal>=3.7
   # ---- Raster/vector helpers ----
   - xarray>=2023.1
+  - netcdf4>=1.6          # NetCDF4 engine for xarray (primary)
+  - h5netcdf>=1.2         # HDF5-based NetCDF engine (fallback)
+  - h5py>=3.9             # HDF5 backend required by h5netcdf
   - pandas>=2.0
   - rasterstats>=0.19
   # ---- Visualization ----

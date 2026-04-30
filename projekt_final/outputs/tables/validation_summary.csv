@@ -1,0 +1,6 @@
+Test,Value,Interp.
+Hit Rate (positive),8/13,✓ Majority inside
+Mann-Whitney U,"U=9288.0, p=0.8944",⚠ Not significant
+Kruskal-Wallis,"H=5.882, p=0.2081",⚠ No difference
+Spearman ρ,"ρ=-0.062, p=0.7824",⚠ Not significant
+OAT most sensitive,f10_sichtbarkeit,±0.78% change

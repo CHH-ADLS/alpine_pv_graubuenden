@@ -53,6 +53,12 @@ projekt final/data/
 projekt_final/data/
 data/
 
+# Output files too large for GitHub (>100 MB)
+projekt_final/outputs/figures/top_sites_map_satellite.png
+projekt_final/outputs/figures/top_sites_map_satellite.pdf
+projekt_final/outputs/figures/validation_plants_map.png
+projekt_final/outputs/figures/validation_plants_map.pdf
+
 # Environment files
 .env
 .env.local

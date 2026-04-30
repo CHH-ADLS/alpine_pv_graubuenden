@@ -1,0 +1,23 @@
+name,status,weight,capacity_kw,suit_value,in_constraint
+Albigna Solar,connected to grid,1.0,410.0,-9999.0,✗
+Bernina Solar,in planning,0.6,12600.0,-9999.0,✗
+Caischavedra,connected to grid,1.0,100.0,-9999.0,✗
+Heinzenberg,discarded,0.0,8000.0,0.7647451,✗
+Lago di Lei,connected to grid,1.0,343.2,-9999.0,✗
+Madrisasolar,under construction,0.8,11000.0,0.8390226,✓
+NalpSolar,under construction,0.8,8069.0,-9999.0,✗
+Nandro Solar,discarded,0.0,38000.0,-9999.0,✗
+Ovra Solara Camplauns,discarded,0.0,15000.0,0.8219484,✓
+Ovra Solara Magriel,in planning,0.6,9500.0,0.8751153,✗
+Ovra Solara Rueun,discarded,0.0,30000.0,-9999.0,✗
+PV Alpin Parsenn,in planning,0.6,8300.0,0.8233542,✗
+PVA Punt dal Gall,connected to grid,1.0,191.2,0.8361826,✗
+SafientalSolar Alp Falätscha,deferred,0.3,12900.0,-9999.0,✗
+SafientalSolar Alp Tenna,deferred,0.3,12400.0,-9999.0,✗
+Scuol Solar,in planning,0.6,33600.0,0.8588667,✓
+Sedrun Solar,under construction,0.8,19300.0,0.8430825,✗
+Solar Alpin Disentis,discarded,0.0,27000.0,0.872807,✓
+Solaranlage Vorab,under construction,0.8,8640.0,0.67872286,✗
+Solarkraftwerk Samedan,in planning,0.6,14500.0,0.69540083,✗
+Splügen-Tambo,deferred,0.3,0.0,-9999.0,✗
+SufersSolar,discarded,0.0,8000.0,0.8341275,✗
